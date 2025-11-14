@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Access Verification Portal</title>
+  <style>
+    :root{--bg:#fff;--ink:#111;--accent:#d9534f}
+    body{font-family: Georgia, 'Times New Roman', serif; background:#f3f4f6; margin:0; padding:28px; color:var(--ink)}
+    .wrap{max-width:980px;margin:0 auto;display:grid;grid-template-columns:360px 1fr;gap:20px}
+    .panel{background:#fff;border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(15,15,15,0.06)}
+    h1{font-size:18px;margin:0 0 10px}
+    label{display:block;font-size:13px;margin:12px 0 6px}
+    input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:15px}
+    .controls{display:flex;gap:8px;margin-top:12px}
+    button{padding:10px 12px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:600}
+    button.secondary{background:#6c757d}
+    .small{font-size:13px;color:#555;margin-top:10px}
+    /* certificate preview */
+    .preview-wrap{display:flex;align-items:center;justify-content:center;padding:24px}
+    .certificate{width:640px;height:420px;background:linear-gradient(180deg,#fff 0%, #fff 65%);border:8px solid #f0e6e1;border-radius:10px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+    .cert-title{font-size:22px;letter-spacing:2px;margin-bottom:6px}
+    .cert-sub{font-size:13px;color:#666;margin-bottom:20px}
+    .name{font-size:40px;font-weight:700;margin:6px 0}
+    .body-text{font-size:15px;color:#333;max-width:80%;text-align:center}
+    .footer{position:absolute;bottom:22px;right:28px;text-align:right;font-size:13px;color:#555}
+    .stamp{position:absolute;left:26px;bottom:26px;background:rgba(217,83,79,0.08);border-radius:50%;width:90px;height:90px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
+    /* print only certificate */
+    @media print{body *{visibility:hidden} .certificate, .certificate *{visibility:visible} .certificate{position:fixed;left:0;top:0;width:100%;height:100%;border:none;box-shadow:none}}
+    .disclaimer{font-size:12px;color:#666;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>Access Verification Portal</h1>
+      <div class="small">This is a simple local access tool. No data is stored.</div>
+
+      <label for="name">Enter your name for verification</label>
+      <input id="name" type="text" placeholder="e.g. Ravi Kumar" value="" />
+
+      <label for="subtitle">Additional info (optional)</label>
+      <input id="subtitle" type="text" placeholder="Optional note" value="Please fill the form to know secret." />
+
+      <div class="controls">
+        <button id="gen">Verify</button>
+        <button id="download" class="secondary">Download PNG</button>
+        <button id="print" class="secondary">Print</button>
+      </div>
+
+      <div class="disclaimer">Tip: This runs entirely in your browser. No names or data are sent or stored.</div>
+    </div>
+
+    <div class="panel preview-wrap">
+      <div id="certificate" style="display:none" class="certificate" role="img" aria-label="Certificate preview">
+        <div style="text-align:center">
+          <div class="cert-title">OFFICIAL RECLASSIFICATION STATEMENT</div>
+          <div class="cert-sub" id="subtext">Please fill the form to know the secret.</div>
+          <div style="height:10px"></div>
+          <div class="body-text">Following an extensive review conducted by the Committee for Behavioural Assessment, it has been determined that:</div>
+          <div class="name" id="certname">[NAME]</div>
+          <div class="body-text">is hereby classified as a <strong>CHILD</strong> for the purposes of celebrating <strong>Children's Day</strong>. Kindly continue demonstrating the required levels of chaos and comic behaviour to validate this classification.</div>
+        </div>
+        <div class="stamp">Certified</div>
+        <div class="footer">Sd/-<br><small>(Officer-in-Charge of Student Behavioral Review)Malla Anirudh</small></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Grab elements
+    const nameInput = document.getElementById('name');
+    const subtitleInput = document.getElementById('subtitle');
+    const certName = document.getElementById('certname');
+    const subText = document.getElementById('subtext');
+    const genBtn = document.getElementById('gen');
+    const downloadBtn = document.getElementById('download');
+    const printBtn = document.getElementById('print');
+    const certificate = document.getElementById('certificate');
+
+    function sanitize(input){
+      return String(input).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function updatePreview(){
+      const nm = nameInput.value.trim() || '[NAME]';
+      certName.innerHTML = sanitize(nm);
+      subText.textContent = subtitleInput.value || '';
+    }
+
+    genBtn.addEventListener('click', () => {
+      updatePreview();
+      // show the certificate (fixed the misplaced invocation)
+      document.getElementById('certificate').style.display = 'block';
+      genBtn.textContent = 'Verified ✓';
+      setTimeout(()=> genBtn.textContent = 'Verify', 1200);
+    });
+
+    printBtn.addEventListener('click', ()=>{
+      updatePreview();
+      window.print();
+    });
+
+    // download PNG by serializing an SVG containing the certificate as a foreignObject
+    downloadBtn.addEventListener('click', async ()=>{
+      updatePreview();
+      // ensure visible for measurement
+      certificate.style.display = 'block';
+      const cw = certificate.offsetWidth;
+      const ch = certificate.offsetHeight;
+
+      // build svg with foreignObject
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS,'svg');
+      svg.setAttribute('xmlns', svgNS);
+      svg.setAttribute('width', cw);
+      svg.setAttribute('height', ch);
+
+      const fo = document.createElementNS(svgNS,'foreignObject');
+      fo.setAttribute('width','100%');
+      fo.setAttribute('height','100%');
+
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+      wrapper.style.width = cw + 'px';
+      wrapper.style.height = ch + 'px';
+      // copy the certificate's HTML into the wrapper
+      wrapper.innerHTML = certificate.outerHTML;
+
+      fo.appendChild(wrapper);
+      svg.appendChild(fo);
+
+      const svgString = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([svgString], {type:'image/svg+xml;charset=utf-8'});
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+
+      img.onload = function(){
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img,0,0);
+        URL.revokeObjectURL(url);
+        const png = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = png; a.download = (nameInput.value.trim() || 'certificate') + '.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      };
+      img.onerror = function(){ alert('Failed to generate image in this browser. Try using the latest Chrome or Firefox.'); };
+      img.src = url;
+    });
+
+    // live preview
+    nameInput.addEventListener('input', updatePreview);
+    subtitleInput.addEventListener('input', updatePreview);
+
+    // init
+    updatePreview();
+  </script>
+</body>
+</html>
